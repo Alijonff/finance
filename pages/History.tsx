@@ -13,7 +13,7 @@ const formatMoney = (amount: number, currency: string) => {
 };
 
 export const History = () => {
-  const { state } = useApp();
+  const { state, t } = useApp();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const prevMonth = () => {
@@ -24,8 +24,8 @@ export const History = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
-  const monthName = currentDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-  // Capitalize first letter
+  const locale = state.language === 'ru' ? 'ru-RU' : 'uz-UZ';
+  const monthName = currentDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   const formattedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
   // Filter Transactions by selected month
@@ -78,17 +78,17 @@ export const History = () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) return 'Сегодня';
-    if (date.toDateString() === yesterday.toDateString()) return 'Вчера';
+    if (date.toDateString() === today.toDateString()) return t.today;
+    if (date.toDateString() === yesterday.toDateString()) return t.yesterday;
     
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    return date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
   };
 
   return (
     <div className="p-5">
       <header className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">История</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Операции за период</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t.history_title}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">{t.history_desc}</p>
       </header>
 
       {/* Month Selector */}
@@ -96,7 +96,7 @@ export const History = () => {
         <button onClick={prevMonth} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
             <ChevronLeft size={20} />
         </button>
-        <span className="font-bold text-gray-800 dark:text-white text-lg">{formattedMonthName}</span>
+        <span className="font-bold text-gray-800 dark:text-white text-lg capitalize">{formattedMonthName}</span>
         <button onClick={nextMonth} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
             <ChevronRight size={20} />
         </button>
@@ -106,13 +106,13 @@ export const History = () => {
       {(totalIncomeUZS > 0 || totalExpenseUZS > 0 || totalIncomeUSD > 0 || totalExpenseUSD > 0) && (
         <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-100 dark:border-green-800/30">
-                <p className="text-xs font-bold text-green-600 dark:text-green-400 uppercase mb-1">Доход</p>
+                <p className="text-xs font-bold text-green-600 dark:text-green-400 uppercase mb-1">{t.income}</p>
                 {totalIncomeUZS > 0 && <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">{formatMoney(totalIncomeUZS, 'UZS')}</p>}
                 {totalIncomeUSD > 0 && <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">{formatMoney(totalIncomeUSD, 'USD')}</p>}
                 {totalIncomeUZS === 0 && totalIncomeUSD === 0 && <p className="text-gray-400 text-sm">-</p>}
             </div>
             <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-800/30">
-                <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1">Расход</p>
+                <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1">{t.expense}</p>
                 {totalExpenseUZS > 0 && <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">{formatMoney(totalExpenseUZS, 'UZS')}</p>}
                 {totalExpenseUSD > 0 && <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">{formatMoney(totalExpenseUSD, 'USD')}</p>}
                 {totalExpenseUZS === 0 && totalExpenseUSD === 0 && <p className="text-gray-400 text-sm">-</p>}
@@ -122,7 +122,7 @@ export const History = () => {
 
       {sortedDates.length === 0 ? (
           <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-              <p className="text-gray-400 dark:text-gray-500">В этом месяце операций нет</p>
+              <p className="text-gray-400 dark:text-gray-500">{t.no_ops_month}</p>
           </div>
       ) : (
           <div className="space-y-6">
@@ -146,7 +146,7 @@ export const History = () => {
                                     <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{tx.category}</p>
                                     {tx.note && <p className="text-xs text-gray-500 dark:text-gray-400">{tx.note}</p>}
                                     {tx.type === 'TRANSFER' && (
-                                        <p className="text-xs text-gray-400">Перевод</p>
+                                        <p className="text-xs text-gray-400">{t.transfer}</p>
                                     )}
                                     {tx.tags && tx.tags.length > 0 && (
                                         <div className="flex flex-wrap gap-1 mt-1">

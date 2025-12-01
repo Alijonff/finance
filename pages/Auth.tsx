@@ -1,9 +1,14 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
-import { Loader2, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
+import { Loader2, Mail, Lock, LogIn } from 'lucide-react';
+import { useApp } from '../context';
 
 export const Auth = () => {
+  // Can't use useApp() fully because Auth is outside provider in App.tsx logic? 
+  // Wait, Auth is rendered inside App which HAS provider. So we can use t.
+  const { t } = useApp();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,11 +33,11 @@ export const Auth = () => {
           password,
         });
         if (error) throw error;
-        alert('Регистрация успешна! Теперь вы можете войти.');
+        alert('OK!');
         setIsLogin(true);
       }
     } catch (e: any) {
-      setError(e.message || 'Произошла ошибка');
+      setError(e.message || 'Error');
     } finally {
       setIsLoading(false);
     }
@@ -48,15 +53,15 @@ export const Auth = () => {
         </div>
         
         <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-2">
-            {isLogin ? 'Вход' : 'Регистрация'}
+            {isLogin ? t.login : t.register}
         </h1>
         <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-8">
-            FinTrack Mobile - Учет финансов
+            FinTrack Mobile - {t.auth_subtitle}
         </p>
 
         <form onSubmit={handleAuth} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Email</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.email}</label>
             <div className="relative">
                 <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
                 <input
@@ -71,7 +76,7 @@ export const Auth = () => {
           </div>
           
           <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Пароль</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.password}</label>
             <div className="relative">
                 <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
                 <input
@@ -98,7 +103,7 @@ export const Auth = () => {
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
           >
             {isLoading && <Loader2 className="animate-spin" size={20} />}
-            {isLogin ? 'Войти' : 'Создать аккаунт'}
+            {isLogin ? t.login : t.register}
           </button>
         </form>
 
@@ -108,9 +113,9 @@ export const Auth = () => {
                 className="text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center justify-center gap-1 mx-auto"
             >
                 {isLogin ? (
-                    <>Нет аккаунта? <span className="font-bold">Регистрация</span></>
+                    <>{t.no_account} <span className="font-bold">{t.register}</span></>
                 ) : (
-                    <>Есть аккаунт? <span className="font-bold">Войти</span></>
+                    <>{t.has_account} <span className="font-bold">{t.login}</span></>
                 )}
             </button>
         </div>

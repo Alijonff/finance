@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../context';
 import { Trash2, Plus, CreditCard, Banknote, Loader2 } from 'lucide-react';
 import { Currency, AccountType } from '../types';
 
 export const ManageAccounts = () => {
-  const { state, actions, isLoading } = useApp();
+  const { state, actions, isLoading, t } = useApp();
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('CARD');
   const [currency, setCurrency] = useState<Currency>('UZS');
@@ -27,7 +28,7 @@ export const ManageAccounts = () => {
         setBalance('');
         setIsAdding(false);
       } catch (e) {
-          alert('Ошибка: ' + e);
+          alert(t.error + ': ' + e);
       } finally {
         setIsSubmitting(false);
       }
@@ -35,11 +36,11 @@ export const ManageAccounts = () => {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Удалить счет "${name}"?`)) {
+    if (confirm(`${t.delete} "${name}"?`)) {
         try {
             await actions.deleteAccount(id);
         } catch(e) {
-            alert('Не удалось удалить: ' + e);
+            alert(t.error + ': ' + e);
         }
     }
   };
@@ -49,8 +50,8 @@ export const ManageAccounts = () => {
   return (
     <div className="p-5">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Управление счетами</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Карты и наличные</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t.manage_accounts}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">{t.accounts_desc}</p>
       </header>
 
       {/* Add Button */}
@@ -59,37 +60,37 @@ export const ManageAccounts = () => {
           onClick={() => setIsAdding(true)}
           className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 text-white font-bold py-3 rounded-xl mb-6 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none transition-all"
         >
-          <Plus size={20} /> Добавить счет
+          <Plus size={20} /> {t.add}
         </button>
       )}
 
       {/* Add Form */}
       {isAdding && (
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl mb-6 border border-gray-200 dark:border-gray-700">
-          <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-3">Новый счет</h3>
+          <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-3">{t.new_operation}</h3>
           <form onSubmit={handleAdd} className="space-y-3">
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Название</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.person_name}</label>
               <input 
                 value={name} onChange={e => setName(e.target.value)}
-                placeholder="Например, Ipak Yuli"
+                placeholder="Ipak Yuli"
                 className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 required
               />
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Тип</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.category}</label>
                 <select 
                   value={type} onChange={e => setType(e.target.value as AccountType)}
                   className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
-                  <option value="CARD">Карта</option>
-                  <option value="CASH">Наличные</option>
+                  <option value="CARD">{t.card}</option>
+                  <option value="CASH">{t.cash}</option>
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Валюта</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.currency}</label>
                 <select 
                   value={currency} onChange={e => setCurrency(e.target.value as Currency)}
                   className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -101,7 +102,7 @@ export const ManageAccounts = () => {
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Текущий баланс</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.current_balance}</label>
               <input 
                 type="number"
                 value={balance} onChange={e => setBalance(e.target.value)}
@@ -111,9 +112,9 @@ export const ManageAccounts = () => {
               />
             </div>
             <div className="flex gap-2 pt-2">
-               <button type="button" onClick={() => setIsAdding(false)} className="flex-1 py-2 text-gray-500 dark:text-gray-400">Отмена</button>
+               <button type="button" onClick={() => setIsAdding(false)} className="flex-1 py-2 text-gray-500 dark:text-gray-400">{t.cancel}</button>
                <button type="submit" disabled={isSubmitting} className="flex-1 bg-blue-600 text-white py-2 rounded-lg flex justify-center items-center">
-                   {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : 'Сохранить'}
+                   {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : t.save}
                </button>
             </div>
           </form>

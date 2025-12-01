@@ -5,7 +5,7 @@ import { Home, PieChart, Plus, WalletCards, Layers, Loader2, CreditCard } from '
 import { useApp } from '../context';
 
 export const Layout = () => {
-  const { isLoading, state, actions } = useApp();
+  const { isLoading, state, actions, t } = useApp();
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -25,7 +25,7 @@ export const Layout = () => {
               paid ? selectedAccountId : null
           );
       } catch (e) {
-          alert("Ошибка: " + e);
+          alert(t.error + ": " + e);
       } finally {
           setIsProcessing(false);
       }
@@ -36,7 +36,7 @@ export const Layout = () => {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center font-sans">
          <div className="flex flex-col items-center gap-3 text-blue-600 dark:text-blue-400">
              <Loader2 className="animate-spin" size={48} />
-             <p className="font-medium text-gray-500 dark:text-gray-400 text-sm animate-pulse">Синхронизация...</p>
+             <p className="font-medium text-gray-500 dark:text-gray-400 text-sm animate-pulse">{t.syncing}</p>
          </div>
       </div>
     );
@@ -59,7 +59,7 @@ export const Layout = () => {
             className={({ isActive }) => `flex flex-col items-center space-y-1 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}
           >
             <Home size={22} />
-            <span className="text-[10px] font-medium">Главная</span>
+            <span className="text-[10px] font-medium">{t.nav_home}</span>
           </NavLink>
 
           <NavLink 
@@ -67,7 +67,7 @@ export const Layout = () => {
             className={({ isActive }) => `flex flex-col items-center space-y-1 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}
           >
             <PieChart size={22} />
-            <span className="text-[10px] font-medium">Бюджет</span>
+            <span className="text-[10px] font-medium">{t.nav_budget}</span>
           </NavLink>
 
           <NavLink 
@@ -84,7 +84,7 @@ export const Layout = () => {
             className={({ isActive }) => `flex flex-col items-center space-y-1 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}
           >
             <WalletCards size={22} />
-            <span className="text-[10px] font-medium">Долги</span>
+            <span className="text-[10px] font-medium">{t.nav_debts}</span>
           </NavLink>
 
           <NavLink 
@@ -92,7 +92,7 @@ export const Layout = () => {
             className={({ isActive }) => `flex flex-col items-center space-y-1 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}
           >
             <Layers size={22} />
-            <span className="text-[10px] font-medium">Меню</span>
+            <span className="text-[10px] font-medium">{t.nav_menu}</span>
           </NavLink>
         </nav>
 
@@ -104,18 +104,18 @@ export const Layout = () => {
                         <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full">
                             <CreditCard size={24} />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Оплата подписки</h3>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t.sub_alert_title}</h3>
                     </div>
                     
                     <p className="text-gray-600 dark:text-gray-300 mb-2">
-                        Сегодня день оплаты подписки <strong className="text-gray-900 dark:text-white">{state.pendingSubscription.name}</strong>.
+                        {t.sub_alert_text} <strong className="text-gray-900 dark:text-white">{state.pendingSubscription.name}</strong>.
                     </p>
                     <p className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                         {state.pendingSubscription.amount.toLocaleString()} {state.pendingSubscription.currency}
                     </p>
 
                     <div className="mb-6">
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">С какой карты списали?</label>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">{t.sub_alert_q}</label>
                         <select 
                             value={selectedAccountId} 
                             onChange={(e) => setSelectedAccountId(e.target.value)}
@@ -133,14 +133,14 @@ export const Layout = () => {
                             className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                             disabled={isProcessing}
                         >
-                            Нет
+                            {t.no}
                         </button>
                         <button 
                             onClick={() => handleSubscriptionResponse(true)}
                             className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors flex justify-center items-center"
                             disabled={isProcessing}
                         >
-                            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : 'Да, списали'}
+                            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : t.yes_paid}
                         </button>
                     </div>
                 </div>

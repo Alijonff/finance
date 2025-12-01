@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
 import { useApp } from '../context';
-import { CheckCircle, Circle, Plus, X, Loader2, ArrowRight } from 'lucide-react';
+import { CheckCircle, Circle, Plus, X, Loader2 } from 'lucide-react';
 import { Currency } from '../types';
 
 export const Debts = () => {
-  const { state, actions, isLoading } = useApp();
+  const { state, actions, isLoading, t } = useApp();
   const [tab, setTab] = useState<'I_OWE' | 'OWED_TO_ME'>('I_OWE');
   const [isAdding, setIsAdding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +26,10 @@ export const Debts = () => {
   const [repayAccountId, setRepayAccountId] = useState('');
 
   const filteredDebts = state.debts.filter(d => d.type === tab);
+  
+  // Counts
+  const iOweCount = state.debts.filter(d => d.type === 'I_OWE' && !d.isPaid).length;
+  const owedToMeCount = state.debts.filter(d => d.type === 'OWED_TO_ME' && !d.isPaid).length;
 
   // Initialize accounts if available
   React.useEffect(() => {
@@ -52,7 +56,7 @@ export const Debts = () => {
     try {
         await actions.toggleDebt(id);
     } catch(e) {
-        alert('Ошибка: ' + e);
+        alert(t.error + ': ' + e);
     }
   };
 
@@ -64,7 +68,7 @@ export const Debts = () => {
               setRepayModalOpen(false);
               setSelectedDebtId(null);
           } catch(e) {
-              alert('Ошибка: ' + e);
+              alert(t.error + ': ' + e);
           } finally {
               setIsSubmitting(false);
           }
@@ -90,7 +94,7 @@ export const Debts = () => {
               setAmount('');
               setDueDate('');
           } catch(e) {
-              alert('Ошибка: ' + e);
+              alert(t.error + ': ' + e);
           } finally {
               setIsSubmitting(false);
           }
@@ -102,7 +106,7 @@ export const Debts = () => {
   return (
     <div className="p-5 relative">
       <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Долги</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t.debts_title}</h1>
         {!isAdding && (
             <button onClick={() => setIsAdding(true)} className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 p-2 rounded-full">
                 <Plus size={20} />
@@ -116,32 +120,32 @@ export const Debts = () => {
           onClick={() => setTab('I_OWE')}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'I_OWE' ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
         >
-          Я должен
+          {t.i_owe} ({iOweCount})
         </button>
         <button
           onClick={() => setTab('OWED_TO_ME')}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'OWED_TO_ME' ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
         >
-          Мне должны
+          {t.owed_to_me} ({owedToMeCount})
         </button>
       </div>
 
       {isAdding && (
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg border border-blue-100 dark:border-blue-900 mb-6 relative">
             <button onClick={() => setIsAdding(false)} className="absolute top-2 right-2 text-gray-400"><X size={16}/></button>
-            <h3 className="font-bold text-gray-800 dark:text-white mb-3">Новый долг ({tab === 'I_OWE' ? 'Я должен' : 'Мне должны'})</h3>
+            <h3 className="font-bold text-gray-800 dark:text-white mb-3">{t.new_debt} ({tab === 'I_OWE' ? t.i_owe : t.owed_to_me})</h3>
             <form onSubmit={handleAdd} className="space-y-3">
                 <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Имя</label>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.person_name}</label>
                     <input value={personName} onChange={e => setPersonName(e.target.value)} className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
                 </div>
                 <div className="flex gap-2">
                     <div className="flex-1">
-                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Сумма</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.amount}</label>
                         <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
                     </div>
                     <div className="w-1/3">
-                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Валюта</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.currency}</label>
                         <select value={currency} onChange={e => setCurrency(e.target.value as Currency)} className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             <option value="UZS">UZS</option>
                             <option value="USD">USD</option>
@@ -150,7 +154,7 @@ export const Debts = () => {
                     </div>
                 </div>
                 <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Срок (необязательно)</label>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.due_date}</label>
                     <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                 </div>
 
@@ -165,7 +169,7 @@ export const Debts = () => {
                             className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
                         />
                         <label htmlFor="linkAccount" className="text-sm text-gray-700 dark:text-gray-300">
-                            {tab === 'OWED_TO_ME' ? 'Списать со счета (Дал в долг)' : 'Зачислить на счет (Взял в долг)'}
+                            {tab === 'OWED_TO_ME' ? t.link_account_out : t.link_account_in}
                         </label>
                     </div>
                     {linkToAccount && state.accounts.length > 0 && (
@@ -180,12 +184,12 @@ export const Debts = () => {
                         </select>
                     )}
                     {linkToAccount && state.accounts.length === 0 && (
-                        <p className="text-xs text-red-500">Нет доступных счетов</p>
+                        <p className="text-xs text-red-500">{t.no_accounts}</p>
                     )}
                 </div>
 
                 <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium flex justify-center items-center">
-                    {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : 'Добавить'}
+                    {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : t.add}
                 </button>
             </form>
           </div>
@@ -194,7 +198,7 @@ export const Debts = () => {
       {/* List */}
       <div className="space-y-3">
         {filteredDebts.length === 0 && !isAdding && (
-            <p className="text-center text-gray-400 dark:text-gray-500 mt-10">Список пуст</p>
+            <p className="text-center text-gray-400 dark:text-gray-500 mt-10">{t.no_debts}</p>
         )}
         {filteredDebts.map(debt => (
           <div key={debt.id} className={`bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between transition-colors ${debt.isPaid ? 'opacity-60' : ''}`}>
@@ -207,14 +211,14 @@ export const Debts = () => {
               </button>
               <div>
                 <h3 className={`font-bold text-gray-800 dark:text-gray-200 ${debt.isPaid ? 'line-through' : ''}`}>{debt.personName}</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{debt.dueDate ? `До ${new Date(debt.dueDate).toLocaleDateString()}` : 'Нет даты'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{debt.dueDate ? `(${t.due_date}: ${new Date(debt.dueDate).toLocaleDateString()})` : ''}</p>
               </div>
             </div>
             <div className="text-right">
               <span className={`block font-bold text-lg ${debt.type === 'I_OWE' ? 'text-red-500' : 'text-green-500'}`}>
                 {debt.amount.toLocaleString()} <span className="text-sm text-gray-500 dark:text-gray-400">{debt.currency}</span>
               </span>
-              {debt.isPaid && <span className="text-xs text-green-600 font-bold uppercase">Погашен</span>}
+              {debt.isPaid && <span className="text-xs text-green-600 font-bold uppercase">{t.paid}</span>}
             </div>
           </div>
         ))}
@@ -225,14 +229,14 @@ export const Debts = () => {
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                      {state.debts.find(d => d.id === selectedDebtId)?.type === 'I_OWE' ? 'Вернуть долг' : 'Получить долг'}
+                      {state.debts.find(d => d.id === selectedDebtId)?.type === 'I_OWE' ? t.repay_debt : t.receive_debt}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                      Выберите счет, через который прошла операция. Баланс обновится автоматически.
+                      {t.repay_modal_desc}
                   </p>
                   
                   <div className="mb-6">
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Счет</label>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.accounts}</label>
                     <select 
                         value={repayAccountId} 
                         onChange={e => setRepayAccountId(e.target.value)}
@@ -249,14 +253,14 @@ export const Debts = () => {
                         onClick={() => setRepayModalOpen(false)}
                         className="flex-1 py-3 text-gray-500 dark:text-gray-400 font-medium"
                       >
-                          Отмена
+                          {t.cancel}
                       </button>
                       <button 
                         onClick={confirmRepayment}
                         disabled={isSubmitting}
                         className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold flex justify-center items-center"
                       >
-                          {isSubmitting ? <Loader2 className="animate-spin" size={20}/> : 'Подтвердить'}
+                          {isSubmitting ? <Loader2 className="animate-spin" size={20}/> : t.confirm}
                       </button>
                   </div>
               </div>

@@ -1,13 +1,15 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState, useCallback } from 'react';
-import { Account, Transaction, Debt, Budget, Subscription, Currency, Theme } from './types';
+import { Account, Transaction, Debt, Budget, Subscription, Currency, Theme, Language } from './types';
 import { supabase } from './supabase';
 import { Session } from '@supabase/supabase-js';
+import { translations } from './translations';
 
 // --- Initial State ---
 
 interface AppState {
   theme: Theme;
+  language: Language;
   accounts: Account[];
   transactions: Transaction[];
   debts: Debt[];
@@ -20,6 +22,7 @@ interface AppState {
 
 const defaultState: AppState = {
   theme: 'light',
+  language: 'ru',
   accounts: [],
   transactions: [],
   debts: [],
@@ -40,6 +43,7 @@ type Action =
   | { type: 'ADD_SUBSCRIPTION'; payload: Subscription }
   | { type: 'DELETE_SUBSCRIPTION'; payload: string }
   | { type: 'SET_THEME'; payload: Theme }
+  | { type: 'SET_LANGUAGE'; payload: Language }
   | { type: 'ADD_CATEGORY'; payload: { type: 'INCOME' | 'EXPENSE'; name: string } }
   | { type: 'DELETE_CATEGORY'; payload: { type: 'INCOME' | 'EXPENSE'; name: string } }
   | { type: 'ADD_ACCOUNT'; payload: Account }
@@ -56,7 +60,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
     case 'LOAD_DATA':
         return { ...state, ...action.payload };
     case 'CLEAR_DATA':
-        return { ...defaultState, theme: state.theme }; 
+        return { ...defaultState, theme: state.theme, language: state.language }; 
     case 'ADD_TRANSACTION': {
       const tx = action.payload;
       const newAccounts = state.accounts.map((acc) => {
@@ -104,6 +108,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
       return { ...state, subscriptions: state.subscriptions.filter(s => s.id !== action.payload) };
     case 'SET_THEME':
       return { ...state, theme: action.payload };
+    case 'SET_LANGUAGE':
+      return { ...state, language: action.payload };
     case 'ADD_CATEGORY':
       if (action.payload.type === 'INCOME') {
         if (state.incomeCategories.includes(action.payload.name)) return state;
@@ -151,6 +157,8 @@ interface Actions {
   addCategory: (payload: { type: 'INCOME' | 'EXPENSE'; name: string }) => Promise<void>;
   deleteCategory: (payload: { type: 'INCOME' | 'EXPENSE'; name: string }) => Promise<void>;
   signOut: () => Promise<void>;
+  setTheme: (theme: Theme) => Promise<void>;
+  setLanguage: (lang: Language) => Promise<void>;
 }
 
 const AppContext = createContext<{
@@ -159,12 +167,14 @@ const AppContext = createContext<{
   isLoading: boolean;
   actions: Actions;
   session: Session | null;
+  t: typeof translations['ru'];
 }>({
   state: defaultState,
   dispatch: () => null,
   isLoading: true,
   actions: {} as Actions,
   session: null,
+  t: translations['ru'],
 });
 
 export const AppProvider = ({ children }: { children?: ReactNode }) => {
@@ -172,16 +182,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
-  // Load Theme
+  // Apply Theme Effect
   useEffect(() => {
-    const savedTheme = localStorage.getItem('fintrack_theme') as Theme;
-    if (savedTheme) {
-        dispatch({ type: 'SET_THEME', payload: savedTheme });
-    }
-  }, []);
-
-  useEffect(() => {
-     localStorage.setItem('fintrack_theme', state.theme);
      const root = window.document.documentElement;
      if (state.theme === 'dark') {
          root.classList.add('dark');
@@ -195,7 +197,10 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     try {
         if (showLoading) setIsLoading(true);
         
-        // Parallel fetching
+        // 1. Fetch User Settings (Theme, Language)
+        const { data: settingsData } = await supabase.from('user_settings').select('*').single();
+        
+        // Parallel fetching for content
         const [accRes, txRes, debtsRes, budgetsRes, subsRes, catRes] = await Promise.all([
             supabase.from('accounts').select('*'),
             supabase.from('transactions').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
@@ -206,15 +211,11 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         ]);
 
         if (accRes.error) console.error('Accounts fetch error:', accRes.error);
-        if (txRes.error) console.error('Transactions fetch error:', txRes.error);
-        if (debtsRes.error) console.error('Debts fetch error:', debtsRes.error);
-        if (budgetsRes.error) console.error('Budgets fetch error:', budgetsRes.error);
-        if (subsRes.error) console.error('Subscriptions fetch error:', subsRes.error);
 
         let incomeCategories = catRes.data?.filter((c: any) => c.type === 'INCOME').map((c: any) => c.name) || [];
         let expenseCategories = catRes.data?.filter((c: any) => c.type === 'EXPENSE').map((c: any) => c.name) || [];
 
-        // Ensure 'Долги' exists in both lists
+        // Ensure 'Долги' exists
         if (!incomeCategories.includes('Долги')) incomeCategories.push('Долги');
         if (!expenseCategories.includes('Долги')) expenseCategories.push('Долги');
 
@@ -270,13 +271,9 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         const currentYear = today.getFullYear();
         
         const dueSub = subscriptions.find(s => {
-            // Is it today?
             if (s.paymentDay !== currentDay) return false;
-            
-            // Check if already paid this month
             if (s.lastPaid) {
                 const paidDate = new Date(s.lastPaid);
-                // If yearly, check year. If monthly, check month & year.
                 if (s.period === 'YEARLY') {
                     if (paidDate.getFullYear() === currentYear) return false;
                 } else {
@@ -289,6 +286,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         dispatch({
             type: 'LOAD_DATA',
             payload: {
+                theme: (settingsData?.theme as Theme) || 'light',
+                language: (settingsData?.language as Language) || 'ru',
                 accounts,
                 transactions,
                 debts,
@@ -308,7 +307,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -336,7 +334,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   // Realtime
   useEffect(() => {
     if (!session) return;
-
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -346,9 +343,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
           schema: 'public',
         },
         () => {
-          console.log('Realtime update received!');
-          // We don't want to re-trigger the modal constantly on every small update if user dismissed it, 
-          // but for consistency we reload data. The reducer handles merging.
           fetchData(false);
         }
       )
@@ -364,6 +358,20 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const actions: Actions = {
     signOut: async () => {
         await supabase.auth.signOut();
+    },
+
+    setTheme: async (theme) => {
+        dispatch({ type: 'SET_THEME', payload: theme });
+        if (session) {
+            await supabase.from('user_settings').upsert({ user_id: session.user.id, theme });
+        }
+    },
+
+    setLanguage: async (lang) => {
+        dispatch({ type: 'SET_LANGUAGE', payload: lang });
+        if (session) {
+            await supabase.from('user_settings').upsert({ user_id: session.user.id, language: lang });
+        }
     },
 
     addTransaction: async (tx) => {
@@ -555,8 +563,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
 
     processSubscriptionPayment: async (sub, accountId) => {
         if (!session) return;
-        
-        // 1. If Account ID is provided (User said YES), create Transaction
         if (accountId) {
              const account = state.accounts.find(a => a.id === accountId);
              if (account) {
@@ -581,20 +587,10 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                  }
              }
         }
-
-        // 2. Update Subscription 'last_paid' field regardless of Yes/No (to stop asking today)
-        // If user said NO, we still mark it as 'handled' for now so the app isn't annoying. 
-        // Or if you want to be stricter, only update if YES.
-        // Based on request "if no, no transaction appears", implying we are done with it.
-        // We will update last_paid to today so it doesn't trigger again until next month.
-        
         const { error } = await supabase.from('subscriptions').update({ 
             last_paid: new Date().toISOString() 
         }).eq('id', sub.id);
-
         if (error) console.error("Error updating subscription status:", error);
-
-        // 3. Clear Pending State
         dispatch({ type: 'SET_PENDING_SUBSCRIPTION', payload: null });
     },
 
@@ -614,7 +610,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   return (
-    <AppContext.Provider value={{ state, dispatch, isLoading, actions, session }}>
+    <AppContext.Provider value={{ state, dispatch, isLoading, actions, session, t: translations[state.language] }}>
       {children}
     </AppContext.Provider>
   );

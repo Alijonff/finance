@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../context';
 import { Trash2, Plus, ArrowDownCircle, ArrowUpCircle, Loader2 } from 'lucide-react';
 
 export const Categories = () => {
-  const { state, actions, isLoading } = useApp();
+  const { state, actions, isLoading, t } = useApp();
   const [tab, setTab] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
   const [newCategory, setNewCategory] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,7 +19,7 @@ export const Categories = () => {
         await actions.addCategory({ type: tab, name: newCategory.trim() });
         setNewCategory('');
       } catch (e) {
-          alert('Ошибка: ' + e);
+          alert(t.error + ': ' + e);
       } finally {
         setIsSubmitting(false);
       }
@@ -26,11 +27,11 @@ export const Categories = () => {
   };
 
   const handleDelete = async (name: string) => {
-    if (confirm(`Удалить категорию "${name}"?`)) {
+    if (confirm(`${t.delete} "${name}"?`)) {
       try {
         await actions.deleteCategory({ type: tab, name });
       } catch(e) {
-        alert('Ошибка: ' + e);
+        alert(t.error + ': ' + e);
       }
     }
   };
@@ -40,8 +41,8 @@ export const Categories = () => {
   return (
     <div className="p-5">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Категории</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Управление категориями</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t.categories}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">...</p>
       </header>
 
       {/* Tabs */}
@@ -50,13 +51,13 @@ export const Categories = () => {
           onClick={() => setTab('INCOME')}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold flex justify-center items-center gap-2 transition-all ${tab === 'INCOME' ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
         >
-          <ArrowDownCircle size={16} /> Доходы
+          <ArrowDownCircle size={16} /> {t.income}
         </button>
         <button
           onClick={() => setTab('EXPENSE')}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold flex justify-center items-center gap-2 transition-all ${tab === 'EXPENSE' ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
         >
-          <ArrowUpCircle size={16} /> Расходы
+          <ArrowUpCircle size={16} /> {t.expense}
         </button>
       </div>
 
@@ -66,7 +67,7 @@ export const Categories = () => {
             type="text" 
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            placeholder="Новая категория..."
+            placeholder="..."
             className="flex-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button 
@@ -81,7 +82,7 @@ export const Categories = () => {
       {/* List */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         {currentCategories.length === 0 ? (
-            <p className="p-4 text-center text-gray-400">Нет категорий</p>
+            <p className="p-4 text-center text-gray-400">...</p>
         ) : (
             currentCategories.map((cat, index) => (
                 <div key={cat} className={`p-4 flex justify-between items-center ${index !== currentCategories.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}>

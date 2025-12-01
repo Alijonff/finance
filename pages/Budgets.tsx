@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../context';
 import { Plus, Trash2, X, Loader2 } from 'lucide-react';
 import { Currency } from '../types';
 
 export const Budgets = () => {
-  const { state, actions, isLoading } = useApp();
+  const { state, actions, isLoading, t } = useApp();
   const [isAdding, setIsAdding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -39,7 +40,7 @@ export const Budgets = () => {
             setCategory('');
             setLimit('');
         } catch (e) {
-            alert('Ошибка: ' + e);
+            alert(t.error + ': ' + e);
         } finally {
             setIsSubmitting(false);
         }
@@ -47,11 +48,11 @@ export const Budgets = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if(confirm('Удалить бюджет?')) {
+    if(confirm(t.delete + '?')) {
         try {
             await actions.deleteBudget(id);
         } catch(e) {
-            alert('Ошибка: ' + e);
+            alert(t.error + ': ' + e);
         }
     }
   };
@@ -62,8 +63,8 @@ export const Budgets = () => {
     <div className="p-5">
       <header className="mb-6 flex justify-between items-center">
         <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Бюджет</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Контроль расходов</p>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t.budgets_title}</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">{t.budget_desc}</p>
         </div>
         {!isAdding && (
             <button 
@@ -78,23 +79,23 @@ export const Budgets = () => {
       {isAdding && (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg border border-blue-100 dark:border-blue-900 mb-6 relative">
             <button onClick={() => setIsAdding(false)} className="absolute top-2 right-2 text-gray-400"><X size={16}/></button>
-            <h3 className="font-bold text-gray-800 dark:text-white mb-3">Новый бюджет</h3>
+            <h3 className="font-bold text-gray-800 dark:text-white mb-3">{t.new_budget}</h3>
             <form onSubmit={handleAdd} className="space-y-3">
                 <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Категория</label>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.category}</label>
                     <select 
                         value={category} 
                         onChange={e => setCategory(e.target.value)}
                         className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         required
                     >
-                        <option value="">Выберите...</option>
+                        <option value="">...</option>
                         {state.expenseCategories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
                 <div className="flex gap-2">
                     <div className="flex-1">
-                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Лимит</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.limit}</label>
                         <input 
                             type="number" 
                             value={limit} 
@@ -105,7 +106,7 @@ export const Budgets = () => {
                         />
                     </div>
                     <div className="w-1/3">
-                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Валюта</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t.currency}</label>
                         <select 
                             value={currency} 
                             onChange={e => setCurrency(e.target.value as Currency)}
@@ -118,7 +119,7 @@ export const Budgets = () => {
                     </div>
                 </div>
                 <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium flex justify-center items-center">
-                    {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : 'Создать'}
+                    {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : t.add}
                 </button>
             </form>
         </div>
@@ -126,7 +127,7 @@ export const Budgets = () => {
 
       <div className="space-y-6">
         {state.budgets.length === 0 && !isAdding && (
-            <div className="text-center text-gray-400 dark:text-gray-500 py-10">Бюджеты не заданы</div>
+            <div className="text-center text-gray-400 dark:text-gray-500 py-10">{t.no_budgets}</div>
         )}
 
         {state.budgets.map(budget => {
@@ -153,7 +154,7 @@ export const Budgets = () => {
                    </div>
                 </div>
                 <div className="text-right pr-6">
-                  <span className="block text-xs text-gray-500 dark:text-gray-400">Лимит</span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">{t.limit}</span>
                   <span className="font-semibold text-gray-900 dark:text-white">{budget.limit.toLocaleString()}</span>
                 </div>
               </div>
@@ -166,9 +167,9 @@ export const Budgets = () => {
               </div>
 
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Потрачено: <span className="text-gray-800 dark:text-gray-200 font-medium">{spent.toLocaleString()}</span></span>
+                <span className="text-gray-500 dark:text-gray-400">{t.spent}: <span className="text-gray-800 dark:text-gray-200 font-medium">{spent.toLocaleString()}</span></span>
                 <span className={isOver ? 'text-red-600 dark:text-red-400 font-bold' : 'text-green-600 dark:text-green-400 font-bold'}>
-                  {isOver ? 'Превышено' : 'Осталось'}: {Math.abs(remaining).toLocaleString()}
+                  {isOver ? t.exceeded : t.remaining}: {Math.abs(remaining).toLocaleString()}
                 </span>
               </div>
             </div>

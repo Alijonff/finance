@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context';
-import { TransactionType, Currency } from '../types';
+import { TransactionType } from '../types';
 import { ArrowRightLeft, ArrowDownCircle, ArrowUpCircle, Loader2, Tag, X } from 'lucide-react';
 
 export const AddOperation = () => {
   const navigate = useNavigate();
-  const { state, actions } = useApp();
+  const { state, actions, t } = useApp();
   
   const [type, setType] = useState<TransactionType>('EXPENSE');
   const [amount, setAmount] = useState('');
@@ -88,7 +88,7 @@ export const AddOperation = () => {
         });
         navigate('/');
     } catch (e) {
-        alert('Ошибка при сохранении: ' + e);
+        alert(t.error + ': ' + e);
     } finally {
         setIsSubmitting(false);
     }
@@ -97,14 +97,14 @@ export const AddOperation = () => {
   if (state.accounts.length === 0) {
       return (
           <div className="p-10 text-center text-gray-500">
-              Сначала создайте счет в разделе "Счета"
+              {t.no_accounts}
           </div>
       )
   }
 
   return (
     <div className="p-5">
-      <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 text-center">Новая операция</h2>
+      <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 text-center">{t.new_operation}</h2>
 
       {/* Type Switcher */}
       <div className="flex bg-gray-200 dark:bg-gray-800 p-1 rounded-xl mb-6 transition-colors">
@@ -112,19 +112,19 @@ export const AddOperation = () => {
           onClick={() => setType('INCOME')}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold flex justify-center items-center gap-2 transition-all ${type === 'INCOME' ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
         >
-          <ArrowDownCircle size={16} /> Доход
+          <ArrowDownCircle size={16} /> {t.income}
         </button>
         <button
           onClick={() => setType('EXPENSE')}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold flex justify-center items-center gap-2 transition-all ${type === 'EXPENSE' ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
         >
-          <ArrowUpCircle size={16} /> Расход
+          <ArrowUpCircle size={16} /> {t.expense}
         </button>
         <button
           onClick={() => setType('TRANSFER')}
           className={`flex-1 py-2 rounded-lg text-sm font-semibold flex justify-center items-center gap-2 transition-all ${type === 'TRANSFER' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
         >
-          <ArrowRightLeft size={16} /> Перевод
+          <ArrowRightLeft size={16} /> {t.transfer}
         </button>
       </div>
 
@@ -133,7 +133,7 @@ export const AddOperation = () => {
         {/* Account Selection */}
         <div>
           <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">
-            {type === 'TRANSFER' ? 'Откуда' : 'Счет'}
+            {type === 'TRANSFER' ? t.from_account : t.from_account}
           </label>
           <select 
             value={accountId} 
@@ -150,7 +150,7 @@ export const AddOperation = () => {
 
         {type === 'TRANSFER' && (
            <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Куда</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.to_account}</label>
             <select 
                 value={toAccountId} 
                 onChange={e => setToAccountId(e.target.value)}
@@ -167,7 +167,7 @@ export const AddOperation = () => {
 
         {/* Amount */}
         <div>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Сумма ({selectedAccount?.currency})</label>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.amount} ({selectedAccount?.currency})</label>
           <input
             type="number"
             value={amount}
@@ -182,18 +182,18 @@ export const AddOperation = () => {
         {isMultiCurrencyTransfer && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl border border-yellow-100 dark:border-yellow-800/30">
                 <label className="block text-xs font-bold text-yellow-700 dark:text-yellow-400 uppercase mb-1">
-                    Курс обмена (1 {selectedAccount.currency} = ? {targetAccount?.currency})
+                    {t.exchange_rate} (1 {selectedAccount.currency} = ? {targetAccount?.currency})
                 </label>
                 <input
                     type="number"
                     value={exchangeRate}
                     onChange={e => setExchangeRate(e.target.value)}
-                    placeholder="Например, 12600"
+                    placeholder="12600"
                     className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-2 rounded-lg border border-yellow-200 dark:border-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     required
                 />
                 <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-2">
-                   Получится: {amount && exchangeRate ? (parseFloat(amount) * parseFloat(exchangeRate)).toLocaleString() : '0'} {targetAccount?.currency}
+                   {t.result}: {amount && exchangeRate ? (parseFloat(amount) * parseFloat(exchangeRate)).toLocaleString() : '0'} {targetAccount?.currency}
                 </p>
             </div>
         )}
@@ -201,7 +201,7 @@ export const AddOperation = () => {
         {/* Category (Hide for Transfer) */}
         {type !== 'TRANSFER' && (
           <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Категория</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.category}</label>
             <select
               value={category}
               onChange={e => setCategory(e.target.value)}
@@ -217,7 +217,7 @@ export const AddOperation = () => {
         {/* Date & Note */}
         <div className="grid grid-cols-2 gap-4">
            <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Дата</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.date}</label>
             <input
                 type="date"
                 value={date}
@@ -226,12 +226,12 @@ export const AddOperation = () => {
             />
            </div>
            <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Заметка</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.note}</label>
             <input
                 type="text"
                 value={note}
                 onChange={e => setNote(e.target.value)}
-                placeholder="Комментарий..."
+                placeholder="..."
                 className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
            </div>
@@ -239,7 +239,7 @@ export const AddOperation = () => {
         
         {/* Tags Input */}
         <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Теги</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{t.tags}</label>
             <div className="relative">
                 <Tag className="absolute left-3 top-3 text-gray-400" size={18} />
                 <input 
@@ -247,7 +247,7 @@ export const AddOperation = () => {
                     value={currentTag}
                     onChange={e => setCurrentTag(e.target.value)}
                     onKeyDown={handleTagKeyDown}
-                    placeholder="Введите тег и нажмите пробел"
+                    placeholder={t.tags_placeholder}
                     className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
@@ -268,7 +268,7 @@ export const AddOperation = () => {
           disabled={isSubmitting}
           className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-bold py-4 rounded-xl mt-6 active:scale-95 transition-all shadow-lg shadow-blue-200 dark:shadow-none flex items-center justify-center disabled:opacity-50"
         >
-          {isSubmitting ? <Loader2 className="animate-spin" /> : 'Сохранить'}
+          {isSubmitting ? <Loader2 className="animate-spin" /> : t.save}
         </button>
       </form>
     </div>

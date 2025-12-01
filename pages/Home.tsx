@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context';
-import { Account } from '../types';
 import { Wallet, CreditCard, Banknote, ArrowRight, Settings, PlusCircle } from 'lucide-react';
 
 const formatMoney = (amount: number, currency: string) => {
@@ -14,7 +13,7 @@ const formatMoney = (amount: number, currency: string) => {
 };
 
 export const Home = () => {
-  const { state } = useApp();
+  const { state, t } = useApp();
 
   const totalUZS = state.accounts
     .filter(a => a.currency === 'UZS')
@@ -31,24 +30,24 @@ export const Home = () => {
   return (
     <div className="p-5">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Мои Финансы</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Обзор баланса</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t.my_finances}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">{t.balance_overview}</p>
       </header>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 text-white shadow-lg shadow-blue-200 dark:shadow-none">
-          <p className="text-blue-100 text-xs font-medium uppercase mb-1">Баланс UZS</p>
+          <p className="text-blue-100 text-xs font-medium uppercase mb-1">UZS</p>
           <p className="text-xl font-bold">{formatMoney(totalUZS, 'UZS')}</p>
         </div>
         <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-4 text-white shadow-lg shadow-emerald-200 dark:shadow-none">
-          <p className="text-emerald-100 text-xs font-medium uppercase mb-1">Баланс USD</p>
+          <p className="text-emerald-100 text-xs font-medium uppercase mb-1">USD</p>
           <p className="text-xl font-bold">{formatMoney(totalUSD, 'USD')}</p>
         </div>
         {totalRUB > 0 && (
           <div className="col-span-2 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl p-4 text-white shadow-lg shadow-rose-200 dark:shadow-none flex items-center justify-between">
             <div>
-                <p className="text-rose-100 text-xs font-medium uppercase mb-1">Баланс RUB</p>
+                <p className="text-rose-100 text-xs font-medium uppercase mb-1">RUB</p>
                 <p className="text-xl font-bold">{formatMoney(totalRUB, 'RUB')}</p>
             </div>
             <div className="opacity-50">
@@ -61,7 +60,7 @@ export const Home = () => {
       {/* Accounts List */}
       <section>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-white">Счета</h2>
+          <h2 className="text-lg font-bold text-gray-800 dark:text-white">{t.accounts}</h2>
           <Link to="/accounts" className="text-gray-400 dark:text-gray-500 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
             <Settings size={18} />
           </Link>
@@ -72,9 +71,9 @@ export const Home = () => {
              <div className="flex justify-center mb-3 text-gray-300 dark:text-gray-600">
                 <Wallet size={40} />
              </div>
-             <p className="text-gray-500 dark:text-gray-400 mb-3 text-sm">Счетов пока нет</p>
+             <p className="text-gray-500 dark:text-gray-400 mb-3 text-sm">{t.no_accounts}</p>
              <Link to="/accounts" className="text-blue-600 dark:text-blue-400 font-medium text-sm flex items-center justify-center gap-1 hover:underline">
-                <PlusCircle size={16} /> Создать первый счет
+                <PlusCircle size={16} /> {t.create_first_account}
              </Link>
           </div>
         ) : (
@@ -87,7 +86,7 @@ export const Home = () => {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-800 dark:text-gray-200">{acc.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{acc.type === 'CASH' ? 'Наличные' : 'Карта'}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{acc.type === 'CASH' ? t.cash : t.card}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -108,15 +107,15 @@ export const Home = () => {
       {/* Recent Transactions Preview */}
       <section className="mt-8">
         <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-white">Последние операции</h2>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white">{t.recent_transactions}</h2>
             <Link to="/history" className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                Все <ArrowRight size={12} />
+                {t.all} <ArrowRight size={12} />
             </Link>
         </div>
         
         {state.transactions.length === 0 ? (
           <div className="text-center py-8 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-            Нет операций
+            {t.no_transactions}
           </div>
         ) : (
           <div className="space-y-3">

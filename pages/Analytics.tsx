@@ -6,7 +6,7 @@ import { Currency } from '../types';
 import { TrendingUp, TrendingDown, Activity, Wallet, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export const Analytics = () => {
-  const { state } = useApp();
+  const { state, t } = useApp();
   const [currency, setCurrency] = useState<Currency>('UZS');
 
   // --- Helpers ---
@@ -16,7 +16,7 @@ export const Analytics = () => {
     return {
         month: d.getMonth(),
         year: d.getFullYear(),
-        label: d.toLocaleDateString('ru-RU', { month: 'long' })
+        label: d.toLocaleDateString(state.language === 'ru' ? 'ru-RU' : 'uz-UZ', { month: 'long' })
     };
   };
 
@@ -74,15 +74,15 @@ export const Analytics = () => {
         .sort((a, b) => b.value - a.value);
 
     // Insight Generation
-    let insight = { text: "В этом месяце пока тихо.", type: 'neutral' };
+    let insight = { text: t.insight_neutral, type: 'neutral' };
     if (expenseChange > 15) {
-        insight = { text: `Расходы выросли на ${Math.round(expenseChange)}% по сравнению с прошлым месяцем.`, type: 'bad' };
+        insight = { text: t.insight_bad_expense.replace('{val}', Math.round(expenseChange).toString()), type: 'bad' };
     } else if (expenseChange < -10) {
-        insight = { text: `Отлично! Вы тратите на ${Math.round(Math.abs(expenseChange))}% меньше, чем в прошлом месяце.`, type: 'good' };
+        insight = { text: t.insight_good_expense.replace('{val}', Math.round(Math.abs(expenseChange)).toString()), type: 'good' };
     } else if (savingsRate > 20) {
-        insight = { text: `Вы сохраняете ${Math.round(savingsRate)}% дохода. Хороший темп накопления!`, type: 'good' };
+        insight = { text: t.insight_good_savings.replace('{val}', Math.round(savingsRate).toString()), type: 'good' };
     } else if (income > 0 && expense > income) {
-        insight = { text: "Внимание: Расходы превышают доходы в этом месяце.", type: 'bad' };
+        insight = { text: t.insight_bad_flow, type: 'bad' };
     }
 
     // Chart Data (Last 6 Months)
@@ -103,7 +103,7 @@ export const Analytics = () => {
         }), 'EXPENSE');
 
         return {
-            name: d.toLocaleDateString('ru-RU', { month: 'short' }),
+            name: d.toLocaleDateString(state.language === 'ru' ? 'ru-RU' : 'uz-UZ', { month: 'short' }),
             income: mIncome,
             expense: mExpense,
             net: mIncome - mExpense
@@ -120,7 +120,7 @@ export const Analytics = () => {
         insight,
         chartData
     };
-  }, [state.transactions, currency, currentMonth.month, currentMonth.year, prevMonth.month, prevMonth.year]);
+  }, [state.transactions, currency, currentMonth.month, currentMonth.year, prevMonth.month, prevMonth.year, state.language, t]);
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
 
@@ -128,8 +128,8 @@ export const Analytics = () => {
     <div className="p-5 pb-20">
       <header className="mb-6 flex justify-between items-center sticky top-0 bg-gray-100 dark:bg-gray-900 z-10 py-2">
         <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Аналитика</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-xs">{currentMonth.label} {currentMonth.year}</p>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t.analytics}</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-xs uppercase">{currentMonth.label} {currentMonth.year}</p>
         </div>
         <select 
             value={currency} 
@@ -156,7 +156,7 @@ export const Analytics = () => {
              {stats.insight.type === 'good' ? <CheckCircle2 size={20} /> : stats.insight.type === 'bad' ? <AlertCircle size={20} /> : <Activity size={20} />}
           </div>
           <div>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Финансовый инсайт</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{t.financial_insight}</p>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{stats.insight.text}</p>
           </div>
       </div>
@@ -167,30 +167,30 @@ export const Analytics = () => {
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
              <div className="flex items-center gap-2 mb-2 text-gray-500 dark:text-gray-400">
                 <Wallet size={16} />
-                <span className="text-xs font-bold uppercase">Сбережения</span>
+                <span className="text-xs font-bold uppercase">{t.savings_rate}</span>
              </div>
              <p className={`text-2xl font-bold ${stats.savingsRate >= 20 ? 'text-green-500' : stats.savingsRate > 0 ? 'text-blue-500' : 'text-red-500'}`}>
                 {Math.round(stats.savingsRate)}%
              </p>
-             <p className="text-[10px] text-gray-400">от дохода</p>
+             <p className="text-[10px] text-gray-400">{t.from_income}</p>
           </div>
 
           {/* Expense Trend */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
              <div className="flex items-center gap-2 mb-2 text-gray-500 dark:text-gray-400">
                 {stats.expenseChange > 0 ? <TrendingUp size={16} className="text-red-500"/> : <TrendingDown size={16} className="text-green-500"/>}
-                <span className="text-xs font-bold uppercase">Динамика</span>
+                <span className="text-xs font-bold uppercase">{t.trend}</span>
              </div>
              <p className={`text-2xl font-bold ${stats.expenseChange > 0 ? 'text-red-500' : 'text-green-500'}`}>
                 {stats.expenseChange > 0 ? '+' : ''}{Math.round(stats.expenseChange)}%
              </p>
-             <p className="text-[10px] text-gray-400">к пред. месяцу</p>
+             <p className="text-[10px] text-gray-400">{t.vs_prev_month}</p>
           </div>
       </div>
 
       {/* 3. Net Flow Chart (Area) */}
       <div className="mb-6">
-        <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">Денежный поток (6 мес)</h3>
+        <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">{t.net_flow}</h3>
         <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 h-48">
              <ResponsiveContainer width="100%" height="100%">
                  <AreaChart data={stats.chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
@@ -222,7 +222,7 @@ export const Analytics = () => {
       <div className="mb-8">
          <div className="flex items-center gap-2 mb-3">
              <Calendar size={16} className="text-gray-400"/>
-             <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase">Интенсивность трат (30 дней)</h3>
+             <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase">{t.spending_heatmap}</h3>
          </div>
          <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto no-scrollbar">
              <div className="flex gap-1 min-w-max justify-between">
@@ -252,7 +252,7 @@ export const Analytics = () => {
 
       {/* 5. Top Categories */}
       <div>
-        <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">Топ категорий</h3>
+        <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase mb-3">{t.top_categories}</h3>
         {stats.expenseByCategory.length > 0 ? (
             <div className="space-y-3">
                 {stats.expenseByCategory.map((item, index) => (
@@ -270,13 +270,13 @@ export const Analytics = () => {
                                 </div>
                                 <div>
                                     <p className="font-semibold text-sm text-gray-800 dark:text-gray-200">{item.name}</p>
-                                    <p className="text-[10px] text-gray-400">{item.count} операций</p>
+                                    <p className="text-[10px] text-gray-400">{item.count} ops</p>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <p className="font-bold text-sm text-gray-900 dark:text-white">{item.value.toLocaleString()} {currency}</p>
                                 <p className="text-[10px] text-gray-400">
-                                    {Math.round((item.value / stats.expense) * 100)}% от общих
+                                    {Math.round((item.value / stats.expense) * 100)}%
                                 </p>
                             </div>
                         </div>
@@ -285,7 +285,7 @@ export const Analytics = () => {
             </div>
         ) : (
              <div className="text-center py-10 text-gray-400 dark:text-gray-500">
-                Нет расходов в этом месяце
+                {t.no_expenses}
             </div>
         )}
       </div>
