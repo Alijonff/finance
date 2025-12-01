@@ -113,6 +113,7 @@ export const Budgets = () => {
                         >
                             <option value="UZS">UZS</option>
                             <option value="USD">USD</option>
+                            <option value="RUB">RUB</option>
                         </select>
                     </div>
                 </div>

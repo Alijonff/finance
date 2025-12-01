@@ -138,8 +138,8 @@ interface Actions {
   deleteAccount: (id: string) => Promise<void>;
   addBudget: (budget: Omit<Budget, 'id'>) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
-  addDebt: (debt: Omit<Debt, 'id'>) => Promise<void>;
-  toggleDebt: (id: string) => Promise<void>;
+  addDebt: (debt: Omit<Debt, 'id'>, accountId?: string) => Promise<void>;
+  toggleDebt: (id: string, accountId?: string) => Promise<void>;
   addSubscription: (sub: Omit<Subscription, 'id'>) => Promise<void>;
   deleteSubscription: (id: string) => Promise<void>;
   addCategory: (payload: { type: 'INCOME' | 'EXPENSE'; name: string }) => Promise<void>;
@@ -199,7 +199,11 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
             supabase.from('categories').select('*'),
         ]);
 
-        if (accRes.error) console.error(accRes.error);
+        if (accRes.error) console.error('Accounts fetch error:', accRes.error);
+        if (txRes.error) console.error('Transactions fetch error:', txRes.error);
+        if (debtsRes.error) console.error('Debts fetch error:', debtsRes.error);
+        if (budgetsRes.error) console.error('Budgets fetch error:', budgetsRes.error);
+        if (subsRes.error) console.error('Subscriptions fetch error:', subsRes.error);
 
         const incomeCategories = catRes.data?.filter((c: any) => c.type === 'INCOME').map((c: any) => c.name) || [];
         const expenseCategories = catRes.data?.filter((c: any) => c.type === 'EXPENSE').map((c: any) => c.name) || [];
@@ -222,7 +226,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         const debts: Debt[] = (debtsRes.data || []).map((d: any) => ({
             id: d.id,
             type: d.type,
-            personName: d.person_name,
+            // Handle both snake_case (DB default) and camelCase (if created manually incorrectly)
+            personName: d.person_name || d.personName || 'Неизвестный', 
             amount: d.amount,
             currency: d.currency,
             dueDate: d.due_date,
@@ -260,7 +265,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         });
 
     } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching data (Global):', error);
     } finally {
         if (showLoading) setIsLoading(false);
     }
@@ -399,8 +404,10 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         dispatch({ type: 'DELETE_BUDGET', payload: id });
     },
 
-    addDebt: async (debt) => {
+    addDebt: async (debt, accountId) => {
         if (!session) return;
+        
+        // 1. Create the Debt record
         const { data, error } = await supabase.from('debts').insert({
             type: debt.type,
             person_name: debt.personName,
@@ -410,16 +417,104 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
             note: debt.note,
             is_paid: debt.isPaid
         }).select().single();
+        
         if (error) throw error;
+
+        // 2. If an account is linked, create a transaction and update balance
+        if (accountId) {
+             const account = state.accounts.find(a => a.id === accountId);
+             if (account) {
+                 const isLending = debt.type === 'OWED_TO_ME';
+                 
+                 const transactionType = isLending ? 'EXPENSE' : 'INCOME';
+                 const newBalance = isLending ? account.balance - debt.amount : account.balance + debt.amount;
+                 
+                 // Update Account
+                 await supabase.from('accounts').update({ balance: newBalance }).eq('id', accountId);
+
+                 // Create Transaction Record
+                 const txData = {
+                     type: transactionType,
+                     amount: debt.amount,
+                     currency: debt.currency,
+                     account_id: accountId,
+                     category: isLending ? `Долг: ${debt.personName}` : `Займ: ${debt.personName}`,
+                     date: new Date().toISOString().split('T')[0],
+                     note: 'Автоматическая операция при создании долга'
+                 };
+                 
+                 const { data: txRecord } = await supabase.from('transactions').insert(txData).select().single();
+                 
+                 if (txRecord) {
+                    dispatch({ 
+                        type: 'ADD_TRANSACTION', 
+                        payload: { 
+                            id: txRecord.id, 
+                            type: txRecord.type as any, 
+                            amount: txRecord.amount, 
+                            currency: txRecord.currency as any, 
+                            accountId: txRecord.account_id, 
+                            category: txRecord.category, 
+                            date: txRecord.date,
+                            note: txRecord.note
+                        } 
+                    });
+                 }
+             }
+        }
+
         dispatch({ type: 'ADD_DEBT', payload: { ...debt, id: data.id } });
     },
 
-    toggleDebt: async (id) => {
+    toggleDebt: async (id, accountId) => {
         if (!session) return;
         const debt = state.debts.find(d => d.id === id);
         if (!debt) return;
-        const { error } = await supabase.from('debts').update({ is_paid: !debt.isPaid }).eq('id', id);
+        
+        const newStatus = !debt.isPaid;
+        const { error } = await supabase.from('debts').update({ is_paid: newStatus }).eq('id', id);
         if (error) throw error;
+
+        if (newStatus === true && accountId) {
+            const account = state.accounts.find(a => a.id === accountId);
+            if (account) {
+                const isPayingMyDebt = debt.type === 'I_OWE';
+                const transactionType = isPayingMyDebt ? 'EXPENSE' : 'INCOME';
+                
+                const newBalance = isPayingMyDebt ? account.balance - debt.amount : account.balance + debt.amount;
+
+                await supabase.from('accounts').update({ balance: newBalance }).eq('id', accountId);
+
+                const txData = {
+                    type: transactionType,
+                    amount: debt.amount,
+                    currency: debt.currency,
+                    account_id: accountId,
+                    category: isPayingMyDebt ? `Возврат займа: ${debt.personName}` : `Возврат долга: ${debt.personName}`,
+                    date: new Date().toISOString().split('T')[0],
+                    note: 'Автоматическая операция при погашении долга'
+                };
+
+                const { data: txRecord } = await supabase.from('transactions').insert(txData).select().single();
+
+                if (txRecord) {
+                    dispatch({ 
+                        type: 'ADD_TRANSACTION', 
+                        payload: { 
+                            id: txRecord.id, 
+                            type: txRecord.type as any, 
+                            amount: txRecord.amount, 
+                            currency: txRecord.currency as any, 
+                            accountId: txRecord.account_id, 
+                            category: txRecord.category, 
+                            date: txRecord.date,
+                            note: txRecord.note
+                        } 
+                    });
+                 }
+            }
+        }
+
         dispatch({ type: 'TOGGLE_DEBT', payload: id });
     },
 

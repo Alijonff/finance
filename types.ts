@@ -1,5 +1,5 @@
 
-export type Currency = 'UZS' | 'USD';
+export type Currency = 'UZS' | 'USD' | 'RUB';
 
 export type AccountType = 'CASH' | 'CARD';
 

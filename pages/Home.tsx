@@ -24,6 +24,10 @@ export const Home = () => {
     .filter(a => a.currency === 'USD')
     .reduce((sum, a) => sum + a.balance, 0);
 
+  const totalRUB = state.accounts
+    .filter(a => a.currency === 'RUB')
+    .reduce((sum, a) => sum + a.balance, 0);
+
   return (
     <div className="p-5">
       <header className="mb-6">
@@ -41,6 +45,17 @@ export const Home = () => {
           <p className="text-emerald-100 text-xs font-medium uppercase mb-1">Баланс USD</p>
           <p className="text-xl font-bold">{formatMoney(totalUSD, 'USD')}</p>
         </div>
+        {totalRUB > 0 && (
+          <div className="col-span-2 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl p-4 text-white shadow-lg shadow-rose-200 dark:shadow-none flex items-center justify-between">
+            <div>
+                <p className="text-rose-100 text-xs font-medium uppercase mb-1">Баланс RUB</p>
+                <p className="text-xl font-bold">{formatMoney(totalRUB, 'RUB')}</p>
+            </div>
+            <div className="opacity-50">
+                <Banknote size={32} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Accounts List */}
@@ -76,7 +91,11 @@ export const Home = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`font-bold ${acc.currency === 'UZS' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  <p className={`font-bold ${
+                      acc.currency === 'UZS' ? 'text-blue-600 dark:text-blue-400' : 
+                      acc.currency === 'USD' ? 'text-emerald-600 dark:text-emerald-400' : 
+                      'text-rose-600 dark:text-rose-400'
+                  }`}>
                     {formatMoney(acc.balance, acc.currency)}
                   </p>
                 </div>

@@ -23,6 +23,10 @@ export const Subscriptions = () => {
     .filter(s => s.currency === 'USD')
     .reduce((acc, s) => acc + (s.period === 'MONTHLY' ? s.amount : s.amount / 12), 0);
 
+  const totalMonthlyRUB = state.subscriptions
+    .filter(s => s.currency === 'RUB')
+    .reduce((acc, s) => acc + (s.period === 'MONTHLY' ? s.amount : s.amount / 12), 0);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (name && amount) {
@@ -82,15 +86,21 @@ export const Subscriptions = () => {
               <Repeat size={18} />
               <span className="text-xs font-bold uppercase tracking-wider">Итого в месяц (прим.)</span>
           </div>
-          <div className="flex gap-6">
-             <div>
-                <p className="text-2xl font-bold">{Math.round(totalMonthlyUZS).toLocaleString()}</p>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar">
+             <div className="whitespace-nowrap">
+                <p className="text-xl font-bold">{Math.round(totalMonthlyUZS).toLocaleString()}</p>
                 <p className="text-xs opacity-70">UZS</p>
              </div>
-             <div className="border-l border-indigo-400 pl-6">
-                <p className="text-2xl font-bold">{Math.round(totalMonthlyUSD).toLocaleString()}</p>
+             <div className="border-l border-indigo-400 pl-4 whitespace-nowrap">
+                <p className="text-xl font-bold">{Math.round(totalMonthlyUSD).toLocaleString()}</p>
                 <p className="text-xs opacity-70">USD</p>
              </div>
+             {totalMonthlyRUB > 0 && (
+                <div className="border-l border-indigo-400 pl-4 whitespace-nowrap">
+                    <p className="text-xl font-bold">{Math.round(totalMonthlyRUB).toLocaleString()}</p>
+                    <p className="text-xs opacity-70">RUB</p>
+                </div>
+             )}
           </div>
       </div>
 
@@ -113,6 +123,7 @@ export const Subscriptions = () => {
                         <select value={currency} onChange={e => setCurrency(e.target.value as Currency)} className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             <option value="UZS">UZS</option>
                             <option value="USD">USD</option>
+                            <option value="RUB">RUB</option>
                         </select>
                     </div>
                 </div>
