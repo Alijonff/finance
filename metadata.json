@@ -1,0 +1,5 @@
+{
+  "name": "FinTrack Mobile",
+  "description": "A mobile-first personal finance tracker supporting multi-currency (UZS/USD), budgeting, debts, and analytics.",
+  "requestFramePermissions": []
+}
