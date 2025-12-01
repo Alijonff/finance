@@ -52,6 +52,8 @@ export interface Subscription {
   currency: Currency;
   period: 'MONTHLY' | 'YEARLY';
   category: string;
+  paymentDay: number;
+  lastPaid?: string;
 }
 
 export type Theme = 'light' | 'dark';

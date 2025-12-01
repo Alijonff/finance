@@ -1,11 +1,35 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, PieChart, Plus, WalletCards, Layers, Loader2 } from 'lucide-react';
+import { Home, PieChart, Plus, WalletCards, Layers, Loader2, CreditCard } from 'lucide-react';
 import { useApp } from '../context';
 
 export const Layout = () => {
-  const { isLoading } = useApp();
+  const { isLoading, state, actions } = useApp();
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Set default account for modal
+  React.useEffect(() => {
+    if (state.accounts.length > 0 && !selectedAccountId) {
+        setSelectedAccountId(state.accounts[0].id);
+    }
+  }, [state.accounts]);
+
+  const handleSubscriptionResponse = async (paid: boolean) => {
+      if (!state.pendingSubscription) return;
+      setIsProcessing(true);
+      try {
+          await actions.processSubscriptionPayment(
+              state.pendingSubscription, 
+              paid ? selectedAccountId : null
+          );
+      } catch (e) {
+          alert("Ошибка: " + e);
+      } finally {
+          setIsProcessing(false);
+      }
+  };
 
   if (isLoading) {
     return (
@@ -29,7 +53,7 @@ export const Layout = () => {
         </div>
 
         {/* Bottom Navigation */}
-        <nav className="fixed bottom-0 w-full max-w-md bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex justify-between items-center z-50 safe-area-pb transition-colors duration-200">
+        <nav className="fixed bottom-0 w-full max-w-md bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex justify-between items-center z-40 safe-area-pb transition-colors duration-200">
           <NavLink 
             to="/" 
             className={({ isActive }) => `flex flex-col items-center space-y-1 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}
@@ -71,6 +95,58 @@ export const Layout = () => {
             <span className="text-[10px] font-medium">Меню</span>
           </NavLink>
         </nav>
+
+        {/* Subscription Alert Modal */}
+        {state.pendingSubscription && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4 animate-fade-in">
+                <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-3 mb-4 text-indigo-600 dark:text-indigo-400">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full">
+                            <CreditCard size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Оплата подписки</h3>
+                    </div>
+                    
+                    <p className="text-gray-600 dark:text-gray-300 mb-2">
+                        Сегодня день оплаты подписки <strong className="text-gray-900 dark:text-white">{state.pendingSubscription.name}</strong>.
+                    </p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+                        {state.pendingSubscription.amount.toLocaleString()} {state.pendingSubscription.currency}
+                    </p>
+
+                    <div className="mb-6">
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">С какой карты списали?</label>
+                        <select 
+                            value={selectedAccountId} 
+                            onChange={(e) => setSelectedAccountId(e.target.value)}
+                            className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none dark:text-white"
+                        >
+                            {state.accounts.map(acc => (
+                                <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => handleSubscriptionResponse(false)}
+                            className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                            disabled={isProcessing}
+                        >
+                            Нет
+                        </button>
+                        <button 
+                            onClick={() => handleSubscriptionResponse(true)}
+                            className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors flex justify-center items-center"
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : 'Да, списали'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
       </div>
     </div>
   );

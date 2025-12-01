@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../context';
-import { Repeat, Plus, Trash2, X, Loader2 } from 'lucide-react';
+import { Repeat, Plus, Trash2, X, Loader2, Calendar } from 'lucide-react';
 import { Currency } from '../types';
 
 export const Subscriptions = () => {
@@ -14,6 +15,7 @@ export const Subscriptions = () => {
   const [currency, setCurrency] = useState<Currency>('UZS');
   const [period, setPeriod] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
   const [category, setCategory] = useState('');
+  const [paymentDay, setPaymentDay] = useState('1');
 
   const totalMonthlyUZS = state.subscriptions
     .filter(s => s.currency === 'UZS')
@@ -37,12 +39,14 @@ export const Subscriptions = () => {
                 amount: parseFloat(amount),
                 currency,
                 period,
-                category: category || 'Подписки'
+                category: category || 'Подписки',
+                paymentDay: parseInt(paymentDay)
             });
             setIsAdding(false);
             setName('');
             setAmount('');
             setCategory('');
+            setPaymentDay('1');
         } catch(e) {
             alert('Ошибка: ' + e);
         } finally {
@@ -127,12 +131,26 @@ export const Subscriptions = () => {
                         </select>
                     </div>
                 </div>
-                <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Период</label>
-                    <select value={period} onChange={e => setPeriod(e.target.value as any)} className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="MONTHLY">Ежемесячно</option>
-                        <option value="YEARLY">Ежегодно</option>
-                    </select>
+                <div className="flex gap-2">
+                    <div className="flex-1">
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Период</label>
+                        <select value={period} onChange={e => setPeriod(e.target.value as any)} className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <option value="MONTHLY">Ежемесячно</option>
+                            <option value="YEARLY">Ежегодно</option>
+                        </select>
+                    </div>
+                    <div className="w-1/3">
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">День оплаты</label>
+                        <input 
+                            type="number" 
+                            min="1" 
+                            max="31" 
+                            value={paymentDay} 
+                            onChange={e => setPaymentDay(e.target.value)} 
+                            className="w-full p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                            required 
+                        />
+                    </div>
                 </div>
                 <div>
                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Категория</label>
@@ -157,7 +175,12 @@ export const Subscriptions = () => {
           <div key={sub.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex justify-between items-center transition-colors">
              <div>
                 <h3 className="font-bold text-gray-800 dark:text-gray-200">{sub.name}</h3>
-                <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded mt-1 inline-block">{sub.category}</span>
+                <div className="flex gap-2 mt-1">
+                    <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">{sub.category}</span>
+                    <span className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-2 py-1 rounded flex items-center gap-1">
+                        <Calendar size={10} /> {sub.paymentDay}-го числа
+                    </span>
+                </div>
              </div>
              <div className="flex items-center gap-3">
                 <div className="text-right">

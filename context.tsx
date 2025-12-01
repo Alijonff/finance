@@ -15,6 +15,7 @@ interface AppState {
   subscriptions: Subscription[];
   incomeCategories: string[];
   expenseCategories: string[];
+  pendingSubscription: Subscription | null; // For the alert
 }
 
 const defaultState: AppState = {
@@ -26,6 +27,7 @@ const defaultState: AppState = {
   subscriptions: [],
   incomeCategories: [],
   expenseCategories: [],
+  pendingSubscription: null,
 };
 
 // --- Actions ---
@@ -44,6 +46,7 @@ type Action =
   | { type: 'DELETE_ACCOUNT'; payload: string }
   | { type: 'ADD_BUDGET'; payload: Budget }
   | { type: 'DELETE_BUDGET'; payload: string }
+  | { type: 'SET_PENDING_SUBSCRIPTION'; payload: Subscription | null }
   | { type: 'CLEAR_DATA' };
 
 // --- Reducer ---
@@ -125,6 +128,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
       return { ...state, budgets: [...state.budgets, action.payload] };
     case 'DELETE_BUDGET':
       return { ...state, budgets: state.budgets.filter(b => b.id !== action.payload) };
+    case 'SET_PENDING_SUBSCRIPTION':
+      return { ...state, pendingSubscription: action.payload };
     default:
       return state;
   }
@@ -142,6 +147,7 @@ interface Actions {
   toggleDebt: (id: string, accountId?: string) => Promise<void>;
   addSubscription: (sub: Omit<Subscription, 'id'>) => Promise<void>;
   deleteSubscription: (id: string) => Promise<void>;
+  processSubscriptionPayment: (sub: Subscription, accountId: string | null) => Promise<void>;
   addCategory: (payload: { type: 'INCOME' | 'EXPENSE'; name: string }) => Promise<void>;
   deleteCategory: (payload: { type: 'INCOME' | 'EXPENSE'; name: string }) => Promise<void>;
   signOut: () => Promise<void>;
@@ -231,7 +237,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         const debts: Debt[] = (debtsRes.data || []).map((d: any) => ({
             id: d.id,
             type: d.type,
-            // Handle both snake_case (DB default) and camelCase (if created manually incorrectly)
             personName: d.person_name || d.personName || 'Неизвестный', 
             amount: d.amount,
             currency: d.currency,
@@ -253,8 +258,33 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
             amount: s.amount,
             currency: s.currency,
             period: s.period,
-            category: s.category
+            category: s.category,
+            paymentDay: s.payment_day || 1,
+            lastPaid: s.last_paid
         }));
+
+        // --- CHECK DUE SUBSCRIPTIONS ---
+        const today = new Date();
+        const currentDay = today.getDate();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        
+        const dueSub = subscriptions.find(s => {
+            // Is it today?
+            if (s.paymentDay !== currentDay) return false;
+            
+            // Check if already paid this month
+            if (s.lastPaid) {
+                const paidDate = new Date(s.lastPaid);
+                // If yearly, check year. If monthly, check month & year.
+                if (s.period === 'YEARLY') {
+                    if (paidDate.getFullYear() === currentYear) return false;
+                } else {
+                    if (paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear) return false;
+                }
+            }
+            return true;
+        });
 
         dispatch({
             type: 'LOAD_DATA',
@@ -265,7 +295,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                 budgets,
                 subscriptions,
                 incomeCategories: incomeCategories.length > 0 ? incomeCategories : ['Зарплата', 'Долги'],
-                expenseCategories: expenseCategories.length > 0 ? expenseCategories : ['Еда', 'Долги']
+                expenseCategories: expenseCategories.length > 0 ? expenseCategories : ['Еда', 'Долги'],
+                pendingSubscription: dueSub || null
             }
         });
 
@@ -316,6 +347,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         },
         () => {
           console.log('Realtime update received!');
+          // We don't want to re-trigger the modal constantly on every small update if user dismissed it, 
+          // but for consistency we reload data. The reducer handles merging.
           fetchData(false);
         }
       )
@@ -335,7 +368,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
 
     addTransaction: async (tx) => {
         if (!session) return;
-        // 1. Insert Transaction
         const { data: newTx, error } = await supabase.from('transactions').insert({
             type: tx.type,
             amount: tx.amount,
@@ -351,7 +383,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
 
         if (error || !newTx) throw error;
 
-        // 2. Update Accounts Balance
+        // Update Account Balance
         const account = state.accounts.find(a => a.id === tx.accountId);
         if (account) {
             let newBalance = account.balance;
@@ -371,7 +403,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
             }
         }
 
-        // 3. Update Local State (Optimistic)
         dispatch({ 
             type: 'ADD_TRANSACTION', 
             payload: { ...tx, id: newTx.id, tags: newTx.tags } 
@@ -413,7 +444,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     addDebt: async (debt, accountId) => {
         if (!session) return;
         
-        // 1. Create the Debt record
         const { data, error } = await supabase.from('debts').insert({
             type: debt.type,
             person_name: debt.personName,
@@ -426,7 +456,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         
         if (error) throw error;
 
-        // 2. If an account is linked, create a transaction and update balance
         if (accountId) {
              const account = state.accounts.find(a => a.id === accountId);
              if (account) {
@@ -435,16 +464,14 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                  const transactionType = isLending ? 'EXPENSE' : 'INCOME';
                  const newBalance = isLending ? account.balance - debt.amount : account.balance + debt.amount;
                  
-                 // Update Account
                  await supabase.from('accounts').update({ balance: newBalance }).eq('id', accountId);
 
-                 // Create Transaction Record
                  const txData = {
                      type: transactionType,
                      amount: debt.amount,
                      currency: debt.currency,
                      account_id: accountId,
-                     category: 'Долги', // Unified category for Analytics
+                     category: 'Долги',
                      date: new Date().toISOString().split('T')[0],
                      note: isLending ? `Дал в долг: ${debt.personName}` : `Взял в долг: ${debt.personName}`
                  };
@@ -454,17 +481,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                  if (txRecord) {
                     dispatch({ 
                         type: 'ADD_TRANSACTION', 
-                        payload: { 
-                            id: txRecord.id, 
-                            type: txRecord.type as any, 
-                            amount: txRecord.amount, 
-                            currency: txRecord.currency as any, 
-                            accountId: txRecord.account_id, 
-                            category: txRecord.category, 
-                            date: txRecord.date,
-                            note: txRecord.note,
-                            tags: txRecord.tags
-                        } 
+                        payload: { ...txRecord, id: txRecord.id, accountId: txRecord.account_id, tags: txRecord.tags || [] } as any
                     });
                  }
              }
@@ -497,40 +514,36 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                     amount: debt.amount,
                     currency: debt.currency,
                     account_id: accountId,
-                    category: 'Долги', // Unified category for Analytics
+                    category: 'Долги',
                     date: new Date().toISOString().split('T')[0],
                     note: isPayingMyDebt ? `Вернул долг: ${debt.personName}` : `Мне вернули долг: ${debt.personName}`
                 };
 
                 const { data: txRecord } = await supabase.from('transactions').insert(txData).select().single();
-
                 if (txRecord) {
-                    dispatch({ 
+                     dispatch({ 
                         type: 'ADD_TRANSACTION', 
-                        payload: { 
-                            id: txRecord.id, 
-                            type: txRecord.type as any, 
-                            amount: txRecord.amount, 
-                            currency: txRecord.currency as any, 
-                            accountId: txRecord.account_id, 
-                            category: txRecord.category, 
-                            date: txRecord.date,
-                            note: txRecord.note,
-                            tags: txRecord.tags
-                        } 
+                        payload: { ...txRecord, id: txRecord.id, accountId: txRecord.account_id, tags: txRecord.tags || [] } as any
                     });
-                 }
+                }
             }
         }
-
         dispatch({ type: 'TOGGLE_DEBT', payload: id });
     },
 
     addSubscription: async (sub) => {
         if (!session) return;
-        const { data, error } = await supabase.from('subscriptions').insert(sub).select().single();
+        const { data, error } = await supabase.from('subscriptions').insert({
+            name: sub.name,
+            amount: sub.amount,
+            currency: sub.currency,
+            period: sub.period,
+            category: sub.category,
+            payment_day: sub.paymentDay
+        }).select().single();
         if (error) throw error;
-        dispatch({ type: 'ADD_SUBSCRIPTION', payload: { ...sub, id: data.id } });
+        
+        dispatch({ type: 'ADD_SUBSCRIPTION', payload: { ...sub, id: data.id, paymentDay: data.payment_day } });
     },
 
     deleteSubscription: async (id) => {
@@ -538,6 +551,51 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         const { error } = await supabase.from('subscriptions').delete().eq('id', id);
         if (error) throw error;
         dispatch({ type: 'DELETE_SUBSCRIPTION', payload: id });
+    },
+
+    processSubscriptionPayment: async (sub, accountId) => {
+        if (!session) return;
+        
+        // 1. If Account ID is provided (User said YES), create Transaction
+        if (accountId) {
+             const account = state.accounts.find(a => a.id === accountId);
+             if (account) {
+                 const newBalance = account.balance - sub.amount;
+                 await supabase.from('accounts').update({ balance: newBalance }).eq('id', accountId);
+
+                 const txData = {
+                     type: 'EXPENSE',
+                     amount: sub.amount,
+                     currency: sub.currency,
+                     account_id: accountId,
+                     category: sub.category,
+                     date: new Date().toISOString().split('T')[0],
+                     note: `Подписка: ${sub.name}`
+                 };
+                 const { data: txRecord } = await supabase.from('transactions').insert(txData).select().single();
+                 if (txRecord) {
+                    dispatch({ 
+                        type: 'ADD_TRANSACTION', 
+                        payload: { ...txRecord, id: txRecord.id, accountId: txRecord.account_id, tags: txRecord.tags || [] } as any
+                    });
+                 }
+             }
+        }
+
+        // 2. Update Subscription 'last_paid' field regardless of Yes/No (to stop asking today)
+        // If user said NO, we still mark it as 'handled' for now so the app isn't annoying. 
+        // Or if you want to be stricter, only update if YES.
+        // Based on request "if no, no transaction appears", implying we are done with it.
+        // We will update last_paid to today so it doesn't trigger again until next month.
+        
+        const { error } = await supabase.from('subscriptions').update({ 
+            last_paid: new Date().toISOString() 
+        }).eq('id', sub.id);
+
+        if (error) console.error("Error updating subscription status:", error);
+
+        // 3. Clear Pending State
+        dispatch({ type: 'SET_PENDING_SUBSCRIPTION', payload: null });
     },
 
     addCategory: async (payload) => {
