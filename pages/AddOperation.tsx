@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context';
 import { TransactionType, Currency } from '../types';
-import { ArrowRightLeft, ArrowDownCircle, ArrowUpCircle, Loader2 } from 'lucide-react';
+import { ArrowRightLeft, ArrowDownCircle, ArrowUpCircle, Loader2, Tag, X } from 'lucide-react';
 
 export const AddOperation = () => {
   const navigate = useNavigate();
@@ -38,6 +39,10 @@ export const AddOperation = () => {
   const [note, setNote] = useState('');
   const [exchangeRate, setExchangeRate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Tags State
+  const [tags, setTags] = useState<string[]>([]);
+  const [currentTag, setCurrentTag] = useState('');
 
   const selectedAccount = state.accounts.find(a => a.id === accountId);
   const targetAccount = state.accounts.find(a => a.id === toAccountId);
@@ -47,6 +52,21 @@ export const AddOperation = () => {
     selectedAccount && 
     targetAccount && 
     selectedAccount.currency !== targetAccount.currency;
+
+  const handleTagKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === ',') {
+          e.preventDefault();
+          const val = currentTag.trim();
+          if (val && !tags.includes(val)) {
+              setTags([...tags, val]);
+              setCurrentTag('');
+          }
+      }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+      setTags(tags.filter(t => t !== tagToRemove));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +84,7 @@ export const AddOperation = () => {
             date,
             note,
             exchangeRate: isMultiCurrencyTransfer ? parseFloat(exchangeRate) : undefined,
+            tags
         });
         navigate('/');
     } catch (e) {
@@ -214,6 +235,32 @@ export const AddOperation = () => {
                 className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
            </div>
+        </div>
+        
+        {/* Tags Input */}
+        <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Теги</label>
+            <div className="relative">
+                <Tag className="absolute left-3 top-3 text-gray-400" size={18} />
+                <input 
+                    type="text" 
+                    value={currentTag}
+                    onChange={e => setCurrentTag(e.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    placeholder="Введите тег и нажмите пробел"
+                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+            {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {tags.map(tag => (
+                        <span key={tag} className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-lg text-sm flex items-center gap-1">
+                            #{tag}
+                            <button type="button" onClick={() => removeTag(tag)} className="hover:text-red-500"><X size={14}/></button>
+                        </span>
+                    ))}
+                </div>
+            )}
         </div>
 
         <button

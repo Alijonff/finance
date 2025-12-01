@@ -24,6 +24,7 @@ export interface Transaction {
   category: string;
   date: string; // ISO Date string
   note?: string;
+  tags?: string[];
 }
 
 export interface Budget {

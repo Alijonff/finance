@@ -133,10 +133,10 @@ export const History = () => {
                     {groupedTransactions[date].map((tx, index) => (
                         <div 
                             key={tx.id} 
-                            className={`p-4 flex justify-between items-center ${index !== groupedTransactions[date].length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
+                            className={`p-4 flex justify-between items-start ${index !== groupedTransactions[date].length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
                         >
-                            <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full ${
+                            <div className="flex items-start gap-3">
+                                <div className={`p-2 rounded-full mt-1 ${
                                     tx.type === 'INCOME' ? 'bg-green-100 dark:bg-green-900/30' : 
                                     tx.type === 'EXPENSE' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
                                 }`}>
@@ -148,10 +148,19 @@ export const History = () => {
                                     {tx.type === 'TRANSFER' && (
                                         <p className="text-xs text-gray-400">Перевод</p>
                                     )}
+                                    {tx.tags && tx.tags.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {tx.tags.map(tag => (
+                                                <span key={tag} className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 px-1.5 py-0.5 rounded">
+                                                    #{tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="text-right">
-                                <span className={`font-bold text-sm ${
+                                <span className={`font-bold text-sm whitespace-nowrap ${
                                     tx.type === 'EXPENSE' ? 'text-red-500 dark:text-red-400' : 
                                     tx.type === 'INCOME' ? 'text-green-500 dark:text-green-400' : 'text-blue-500 dark:text-blue-400'
                                 }`}>

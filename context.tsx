@@ -193,7 +193,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         const [accRes, txRes, debtsRes, budgetsRes, subsRes, catRes] = await Promise.all([
             supabase.from('accounts').select('*'),
             supabase.from('transactions').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
-            supabase.from('debts').select('*').order('created_at', { ascending: false }),
+            supabase.from('debts').select('*'), 
             supabase.from('budgets').select('*'),
             supabase.from('subscriptions').select('*'),
             supabase.from('categories').select('*'),
@@ -205,8 +205,12 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         if (budgetsRes.error) console.error('Budgets fetch error:', budgetsRes.error);
         if (subsRes.error) console.error('Subscriptions fetch error:', subsRes.error);
 
-        const incomeCategories = catRes.data?.filter((c: any) => c.type === 'INCOME').map((c: any) => c.name) || [];
-        const expenseCategories = catRes.data?.filter((c: any) => c.type === 'EXPENSE').map((c: any) => c.name) || [];
+        let incomeCategories = catRes.data?.filter((c: any) => c.type === 'INCOME').map((c: any) => c.name) || [];
+        let expenseCategories = catRes.data?.filter((c: any) => c.type === 'EXPENSE').map((c: any) => c.name) || [];
+
+        // Ensure 'Долги' exists in both lists
+        if (!incomeCategories.includes('Долги')) incomeCategories.push('Долги');
+        if (!expenseCategories.includes('Долги')) expenseCategories.push('Долги');
 
         const accounts: Account[] = accRes.data || [];
         
@@ -220,7 +224,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
             exchangeRate: t.exchange_rate,
             category: t.category,
             date: t.date,
-            note: t.note
+            note: t.note,
+            tags: t.tags || []
         }));
 
         const debts: Debt[] = (debtsRes.data || []).map((d: any) => ({
@@ -259,8 +264,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                 debts,
                 budgets,
                 subscriptions,
-                incomeCategories: incomeCategories.length > 0 ? incomeCategories : ['Зарплата'],
-                expenseCategories: expenseCategories.length > 0 ? expenseCategories : ['Еда']
+                incomeCategories: incomeCategories.length > 0 ? incomeCategories : ['Зарплата', 'Долги'],
+                expenseCategories: expenseCategories.length > 0 ? expenseCategories : ['Еда', 'Долги']
             }
         });
 
@@ -340,7 +345,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
             exchange_rate: tx.exchangeRate,
             category: tx.category,
             date: tx.date,
-            note: tx.note
+            note: tx.note,
+            tags: tx.tags
         }).select().single();
 
         if (error || !newTx) throw error;
@@ -368,7 +374,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         // 3. Update Local State (Optimistic)
         dispatch({ 
             type: 'ADD_TRANSACTION', 
-            payload: { ...tx, id: newTx.id } 
+            payload: { ...tx, id: newTx.id, tags: newTx.tags } 
         });
     },
 
@@ -438,9 +444,9 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                      amount: debt.amount,
                      currency: debt.currency,
                      account_id: accountId,
-                     category: isLending ? `Долг: ${debt.personName}` : `Займ: ${debt.personName}`,
+                     category: 'Долги', // Unified category for Analytics
                      date: new Date().toISOString().split('T')[0],
-                     note: 'Автоматическая операция при создании долга'
+                     note: isLending ? `Дал в долг: ${debt.personName}` : `Взял в долг: ${debt.personName}`
                  };
                  
                  const { data: txRecord } = await supabase.from('transactions').insert(txData).select().single();
@@ -456,7 +462,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                             accountId: txRecord.account_id, 
                             category: txRecord.category, 
                             date: txRecord.date,
-                            note: txRecord.note
+                            note: txRecord.note,
+                            tags: txRecord.tags
                         } 
                     });
                  }
@@ -490,9 +497,9 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                     amount: debt.amount,
                     currency: debt.currency,
                     account_id: accountId,
-                    category: isPayingMyDebt ? `Возврат займа: ${debt.personName}` : `Возврат долга: ${debt.personName}`,
+                    category: 'Долги', // Unified category for Analytics
                     date: new Date().toISOString().split('T')[0],
-                    note: 'Автоматическая операция при погашении долга'
+                    note: isPayingMyDebt ? `Вернул долг: ${debt.personName}` : `Мне вернули долг: ${debt.personName}`
                 };
 
                 const { data: txRecord } = await supabase.from('transactions').insert(txData).select().single();
@@ -508,7 +515,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
                             accountId: txRecord.account_id, 
                             category: txRecord.category, 
                             date: txRecord.date,
-                            note: txRecord.note
+                            note: txRecord.note,
+                            tags: txRecord.tags
                         } 
                     });
                  }
